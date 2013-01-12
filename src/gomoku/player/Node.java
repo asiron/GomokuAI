@@ -4,10 +4,8 @@
  */
 package gomoku.player;
 
-import gomoku.GomokuBoard;
 import gomoku.GomokuBoardState;
 import java.awt.Point;
-import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,7 +18,10 @@ import java.util.Map;
 public class Node {
     
     
-
+    /**
+     * move that was made in this node
+     */
+    private Point lastMove;
     
     /**
      * Map of children, due to undefined number of 
@@ -32,25 +33,24 @@ public class Node {
     /**
      * List of all points that are adjacent to current gamestate points
      */
-    public List<Point> adjacencyList;
+    private List<Point> adjacencyList;
     
     /**
      * Map of current Points on board and corresponding owners
      */
-    public Map<Point,GomokuBoardState> boardState;
+    private Map<Point,GomokuBoardState> boardState;
     
     /**
      * Creates new node and initializes its values
-     * @param rect is rectangle from game rules to specify size of board
      * @param oldBoardState is a board from previous node
      * @param newMove is a Point selected as a move for this node
      * @param player is a player type ( min or max ) selected for this node
-     * @param 
+     * @param makePlies specifies number of plies to make with one invocation of this constructor
      */
-    public Node(Rectangle rect, Map<Point,GomokuBoardState> oldBoardState, Point newMove, GomokuBoardState player){
+    public Node(Map<Point,GomokuBoardState> oldBoardState, Point newMove, GomokuBoardState player, int makePlies){
         
-        //Initialize Map for children of this node
-        children = new HashMap<>(rect.height*rect.width);
+        //Initialize lastMove - subject to change
+        lastMove = new Point(newMove);
         
         //Initialize list for adjacent points to currently occupied points
         adjacencyList = new ArrayList<>(); 
@@ -58,28 +58,49 @@ public class Node {
         //Copies old list of occupied points and adds new point that was selected
         //for this node
         boardState = new HashMap<>(oldBoardState);
-        boardState.put(newMove, player);
+        boardState.put(newMove, player);      
         
-        //Get list of only adjacent points
-        for(Map.Entry<Point,GomokuBoardState> entry : boardState.entrySet()){
-            for(int x=-1; x<=1; ++x){
-                for(int y=-1; y<=1; y++){
-                    if(!boardState.containsKey(new Point(entry.getKey().x+x, entry.getKey().y+y))) {
-                        adjacencyList.add(new Point(entry.getKey().x+x, entry.getKey().y+y));
+        // Depending on how many plies we want to make, we initialize adjacencyList
+        // and children's Map, then we make list of all possible moves considering
+        // only adjacent points and we create children map according to that list
+        if(makePlies < 1){
+            
+            //Get list of only adjacent points
+            for(Map.Entry<Point,GomokuBoardState> entry : boardState.entrySet()){
+                for(int x=-1; x<=1; ++x){
+                    for(int y=-1; y<=1; ++y){
+                        if(!boardState.containsKey(new Point(entry.getKey().x+x, entry.getKey().y+y))) {
+                            adjacencyList.add(new Point(entry.getKey().x+x, entry.getKey().y+y));
+                        }
                     }
                 }
             }
+            
+            children = new HashMap<>();
+            // Creates children based on adjacencyList
+            for(Point p : adjacencyList){
+                int i=0;
+                children.put(i, new Node(boardState, p, player == GomokuBoardState.A ? GomokuBoardState.B : GomokuBoardState.A, makePlies-1));
+                i++;
+            }
         }
-        
-        // Creates children based on adjacencyList if
-        for(Point p : adjacencyList){
-            int i=0;
-            children.put(i, new Node(rect, boardState, p, player == GomokuBoardState.A ? GomokuBoardState.A : GomokuBoardState.B));
-            i++;
-        }
-         
-        
-    }    
-
+    } 
     
+    
+    /**
+     * Evaluation function for leaves 
+     * 
+     * @return integer which is an evaluation of leaves 
+     */
+    public Integer evaluate(){
+        return 5;
+    }
+    
+    /**
+     * Returns last move
+     * @return lastMove as in move made in this node
+     */
+    public Point getLastMove(){
+        return lastMove;
+    }
 }
