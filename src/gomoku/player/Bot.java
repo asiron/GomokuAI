@@ -25,7 +25,7 @@ public class Bot extends AIPlayer{
     public Bot(){
         super();
         System.out.println("Alpha-beta bot created!");
-        MAXDEPTH = 4;
+        MAXDEPTH = 3;
         System.out.printf("Setting MAXDEPTH to %d\n", MAXDEPTH);
     }
     
@@ -34,13 +34,15 @@ public class Bot extends AIPlayer{
     public void run(){
     
         while(!Thread.interrupted()){
-            ab = new AlphaBeta(new Node(transformBoard(), board.lastMove(), board.get(board.lastMove())), board.get(board.lastMove()));
+            ab = new AlphaBeta(new Node(board, board.lastMove(), board.get(board.lastMove())), board.get(board.lastMove()));
             for(int i=2; i<=MAXDEPTH; ++i)  
                 position = ab.algorithm(i) ;
            
+            System.out.print("Finished calculating, yielding cpu..");
             Gomoku.game.playerDone();
         }
     }
+    
     
     /**
      * Transforms GomokuBoard which is obsolete for search-like algorithms into

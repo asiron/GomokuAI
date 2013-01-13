@@ -4,6 +4,7 @@
  */
 package gomoku.player;
 
+import gomoku.GomokuBoard;
 import gomoku.GomokuBoardState;
 import java.awt.Point;
 import java.util.ArrayList;
@@ -36,6 +37,10 @@ public class Node {
      */
     public Map<Integer,Node> children;
     
+    /**
+     * Board with current gamestates
+     */
+    private GomokuBoard board;
     
     /**
      * List of all points that are adjacent to current gamestate points
@@ -43,17 +48,12 @@ public class Node {
     private List<Point> adjacencyList;
     
     /**
-     * Map of current Points on board and corresponding owners
-     */
-    private Map<Point,GomokuBoardState> boardState;
-    
-    /**
      * Creates new node and initializes its values
-     * @param oldBoardState is a board from previous node
+     * @param oldBoard is a board from previous node
      * @param newMove is a Point selected as a move for this node
      * @param player is a player type ( min or max ) selected for this node
      */
-    public Node(Map<Point,GomokuBoardState> oldBoardState, Point newMove, GomokuBoardState player){
+    public Node(GomokuBoard oldBoard, Point newMove, GomokuBoardState player){
         
         //Initializes lastMove - subject to change
         lastMove = new Point(newMove);
@@ -64,11 +64,11 @@ public class Node {
         //Initializes list for adjacent points to currently occupied points
         adjacencyList = new ArrayList<>(); 
         
-        //Copies old list of occupied points and adds new point that was selected
+        //Copies old board of points and adds new point that was selected
         //for this node
-        boardState = new HashMap<>(oldBoardState);
-        boardState.put(newMove, player);      
-        
+        board = new GomokuBoard(oldBoard);
+        board.set(newMove, player);
+        System.out.println("Creating node..");
     } 
     
     /**
@@ -76,22 +76,24 @@ public class Node {
      */
     public void createChildren(){
         
-        //Get list of only adjacent points
-        for(Map.Entry<Point,GomokuBoardState> entry : boardState.entrySet()){
-            for(int x=-1; x<=1; ++x){
-                for(int y=-1; y<=1; ++y){
-                    if(!boardState.containsKey(new Point(entry.getKey().x+x, entry.getKey().y+y))) {
-                        adjacencyList.add(new Point(entry.getKey().x+x, entry.getKey().y+y));
+        for(int i = 0; i<board.getSize().width; ++i){
+            for(int j = 0; j<board.getSize().height; ++j){
+                for(int x=-1; x<=1; ++x){
+                    for(int y=-1; y<=1; ++y){
+                        if(board.get(new Point(i+x, j+y)) == GomokuBoardState.EMPTY) {
+                            adjacencyList.add(new Point(i+x,j+y));
+                        }
                     }
                 }
             }
         }
+        
 
         children = new HashMap<>();
         // Creates children based on adjacencyList
         for(Point p : adjacencyList){
             int i=0;
-            children.put(i, new Node(boardState, p, lastPlayer == GomokuBoardState.A ? GomokuBoardState.B : GomokuBoardState.A));
+            children.put(i, new Node(board, p, lastPlayer == GomokuBoardState.A ? GomokuBoardState.B : GomokuBoardState.A));
             i++;
         }
     }
@@ -103,7 +105,76 @@ public class Node {
      * @return integer which is an evaluation of leaves 
      */
     public Integer evaluate(){
-        return 5;
+        
+        Integer result = 0;
+        
+        //Look for doubles, triples, and so on
+        int patterns[] = {2,3,4,5};
+        
+        for(int i : patterns){
+            
+            //Analyze columns
+            for(int x=0; x < board.getSize().width; ++x){
+                for(int y=0; y < board.getSize().height - i + 1; ++y){
+                    boolean flag = true;
+                    for(int k=0; k < i-1; ++k){
+                        if(board.getState(x, y+k) != lastPlayer){
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        result += i*10;
+                }
+            }
+            
+            //Analyze rows
+            for(int y=0; y < board.getSize().height; ++y){
+                for(int x=0; x < board.getSize().width - x + 1; ++y){
+                    boolean flag = true;
+                    for(int k=0; k < i-1; ++k){
+                        if(board.getState(x+k, y) != lastPlayer){
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        result += i*10;
+                }
+            }
+        
+            //Analyze right diagonals
+            for(int x=0; x < board.getSize().width - i + 1; ++x){
+                for(int y=0; y < board.getSize().height - i + 1; ++y){
+                    boolean flag = true;
+                    for(int k=0; k < i-1; ++k){
+                        if(board.getState(x+k, y+k) != lastPlayer){
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        result += i*10;
+                }
+            }
+            
+            //Analyze left diagonals
+            for(int x=i-1; x < board.getSize().width; ++x){
+                for(int y=0; y < board.getSize().height - i + 1; ++y){
+                    boolean flag = true;
+                    for(int k=0; k < i-1; ++k){
+                        if(board.getState(x-k, y+k) != lastPlayer){
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        result += i*10;
+                }
+            }
+        }
+
+        return result;
     }
     
     /**
