@@ -22,8 +22,11 @@
             </reference>
         </references>
         <spellchecker-wordlist xmlns="http://www.netbeans.org/ns/spellchecker-wordlist/1">
+            <word>Enum</word>
+            <word>enums</word>
             <word>Eval</word>
             <word>gamestate</word>
+            <word>gamestates</word>
             <word>Gomoku</word>
         </spellchecker-wordlist>
     </configuration>

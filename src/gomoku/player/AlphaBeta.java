@@ -7,6 +7,8 @@ import java.util.Map;
 
 /**
  * Implementation of Alpha-Beta pruning algorithm for Gomoku
+ * Builds up MinMax search tree and traverses through it meanwhile pruning 
+ * branches that do not need checking
  * 
  * @author asiron
  */
@@ -15,12 +17,12 @@ public class AlphaBeta {
     /**
      * Enum value for our bot
      */
-    GomokuBoardState me;    
+    private GomokuBoardState me;    
     
     /**
      * Root of a search tree
      */
-    public Node root;
+   private Node root;
     
     
     /**
@@ -30,20 +32,27 @@ public class AlphaBeta {
     public AlphaBeta(Node _root, GomokuBoardState _me){
         root = _root;
         me = _me;
-    }
-    
+    } 
+   
     
     /**
      * Runs alpha-beta algorithm up to given depth
      * 
-     * @return 
+     * @return Point found in search tree
      */
     public Point algorithm(int depth){
-        
-        
-        return new Point();
+        return new Point(alphaBeta(root, depth, new Pair(-1000000000, new Point(-1,-1)), new Pair(1000000000, new Point(-1,-1)), me).second);
     }
     
+    /**
+     * Implementation of alpha-beta pruning algorithm in recursive version
+     * @param node Current node of search tree that we are on
+     * @param depth Desired search depth, used as base case for recursion
+     * @param alpha Best already explored option along the path to the root for the maximizer
+     * @param beta Best already explored option along the path to the root for the minimizer
+     * @param player Current player, maximizer or minimizer
+     * @return Pair of 1. value from Eval function 2. found point
+     */
     private Pair<Integer, Point> alphaBeta(Node node, Integer depth, Pair<Integer, Point> alpha, Pair<Integer, Point> beta, GomokuBoardState player){
         
         // if depth is equal to 0, then we return eval function of current node
@@ -53,6 +62,8 @@ public class AlphaBeta {
         }
         
         if(player == me){
+            
+            node.createChildren();
             for(Map.Entry<Integer,Node> child : node.children.entrySet()){
                 
                 player = (player == GomokuBoardState.A ) ? GomokuBoardState.B : GomokuBoardState.A;
@@ -63,12 +74,15 @@ public class AlphaBeta {
                     alpha.second = temp.second;
                 }
  
-                if( beta.first <= alpha.first )
+                if( beta.first <= alpha.first ) {
                     break;
+                }
             }
             return alpha;
   
         }else{
+            
+            node.createChildren();
             for(Map.Entry<Integer,Node> child : node.children.entrySet()){
                 
                 player = (player == GomokuBoardState.A ) ? GomokuBoardState.B : GomokuBoardState.A;
@@ -79,8 +93,9 @@ public class AlphaBeta {
                     beta.second = temp.second;
                 }
  
-                if( beta.first <= alpha.first )
+                if( beta.first <= alpha.first ) {
                     break;
+                }
             }
             return beta;
         }
