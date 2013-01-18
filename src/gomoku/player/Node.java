@@ -1,11 +1,10 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package gomoku.player;
 
+import gomoku.GomokuBoard;
 import gomoku.GomokuBoardState;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,55 +18,45 @@ import java.util.Map;
  */
 public class Node {
     
-    
     /**
-     * move that was made in this node
+     * Move that was made in this node
      */
     private Point lastMove;
     
     /**
-     * player that placed last pawn
+     * Player that placed last pawn
      */
     private GomokuBoardState lastPlayer;
     
     /**
-     * Map of children, due to undefined number of 
+     * List of children, due to undefined number of 
      * children at given point in time
      */
-    public Map<Integer,Node> children;
-    
-    
+    public List<Node> children;
+        
     /**
-     * List of all points that are adjacent to current gamestate points
+     * Board with current gamestates
      */
-    private List<Point> adjacencyList;
-    
-    /**
-     * Map of current Points on board and corresponding owners
-     */
-    private Map<Point,GomokuBoardState> boardState;
-    
+    private GomokuBoard board;
+
     /**
      * Creates new node and initializes its values
-     * @param oldBoardState is a board from previous node
+     * @param oldBoard is a board from previous node
      * @param newMove is a Point selected as a move for this node
      * @param player is a player type ( min or max ) selected for this node
      */
-    public Node(Map<Point,GomokuBoardState> oldBoardState, Point newMove, GomokuBoardState player){
+    public Node(GomokuBoard oldBoard, Point newMove, GomokuBoardState player){
         
         //Initializes lastMove - subject to change
-        lastMove = new Point(newMove);
+        lastMove = newMove;
         
         //Initializes lastPlayer
         lastPlayer = player;
-        
-        //Initializes list for adjacent points to currently occupied points
-        adjacencyList = new ArrayList<>(); 
-        
-        //Copies old list of occupied points and adds new point that was selected
+                
+        //Copies old board of points and adds new point that was selected
         //for this node
-        boardState = new HashMap<>(oldBoardState);
-        boardState.put(newMove, player);      
+        this.board = oldBoard;
+        this.board.set(lastMove, player);
         
     } 
     
@@ -76,34 +65,220 @@ public class Node {
      */
     public void createChildren(){
         
-        //Get list of only adjacent points
-        for(Map.Entry<Point,GomokuBoardState> entry : boardState.entrySet()){
-            for(int x=-1; x<=1; ++x){
-                for(int y=-1; y<=1; ++y){
-                    if(!boardState.containsKey(new Point(entry.getKey().x+x, entry.getKey().y+y))) {
-                        adjacencyList.add(new Point(entry.getKey().x+x, entry.getKey().y+y));
+        List<Point> adjacencyList = new ArrayList<>();
+        
+        for(int i = 0; i<board.getSize().width; ++i){
+            for(int j = 0; j<board.getSize().height; ++j){
+                if((board.getState(i,j) == GomokuBoardState.A )|| (board.getState(i,j) == GomokuBoardState.B)){
+                    for(int x=-1; x<=1; ++x){
+                        for(int y=-1; y<=1; ++y){
+                            if( ( board.getState(i+x, j+y) == GomokuBoardState.EMPTY )  &&  ( !adjacencyList.contains(new Point(i+x,j+y)) ) ) {
+                                adjacencyList.add(new Point(i+x,j+y));
+                            }
+                        }
                     }
-                }
+                }     
             }
         }
-
-        children = new HashMap<>();
+        children = new ArrayList<>();
         // Creates children based on adjacencyList
         for(Point p : adjacencyList){
-            int i=0;
-            children.put(i, new Node(boardState, p, lastPlayer == GomokuBoardState.A ? GomokuBoardState.B : GomokuBoardState.A));
-            i++;
+            children.add(new Node(new GomokuBoard(board), new Point(p), lastPlayer == GomokuBoardState.A ? GomokuBoardState.B : GomokuBoardState.A));
         }
     }
     
+    /**
+     * Checks if game will end if it comes to this state for given player
+     * @param player will check game board for this player
+     * @param opponent will check game board fir this player as well
+     * @param mInRow points in row to win game, needed for checking
+     * @return GomokuBoardState returns player that won game, or null
+     */
+    public GomokuBoardState isGameOver(GomokuBoardState player, GomokuBoardState opponent, int mInRow){
+       
+       // Analyze columns
+       for(int i=0; i<board.getSize().width; ++i){
+           for(int j=0; j<board.getSize().height - mInRow +1; ++j){
+               boolean playerFlag = true;
+               boolean opponentFlag = true;
+               for(int k=0; k<=mInRow-1; ++k){
+                   if(board.getState(i, j+k) != player){
+                       playerFlag = false;
+                   }
+                   if(board.getState(i, j+k) != opponent){
+                       opponentFlag = false;
+                   }    
+                   if(!playerFlag && !opponentFlag){
+                       break;
+                   }
+               }
+               if ( playerFlag ){
+                   return player;
+               }
+               if ( opponentFlag ){
+                   return opponent;
+                }    
+           }
+       }
+       
+       // Analyze rows
+       for(int j=0; j<board.getSize().height; ++j){
+           for(int i=0; i<board.getSize().width - mInRow +1; ++i){
+               boolean playerFlag = true;
+               boolean opponentFlag = true;
+               for(int k=0; k<=mInRow-1; ++k){
+                   if(board.getState(i+k, j) != player){
+                       playerFlag = false;
+                   }
+                   if(board.getState(i+k, j) != opponent){
+                       opponentFlag = false;
+                   }    
+                   if(!playerFlag && !opponentFlag){
+                       break;
+                   }
+               }
+               if ( playerFlag ){
+                   return player;
+               }
+               if ( opponentFlag ){
+                   return opponent;
+                }    
+           }
+       }
+       
+       //Analyze left diagonals
+       for(int i=0; i<board.getSize().width - mInRow +1; ++i){
+           for(int j=0; j<board.getSize().height - mInRow +1; ++j){
+               boolean playerFlag = true;
+               boolean opponentFlag = true;
+               for(int k=0; k<=mInRow-1; ++k){
+                   if(board.getState(i+k, j+k) != player){
+                       playerFlag = false;
+                   }
+                   if(board.getState(i+k, j+k) != opponent){
+                       opponentFlag = false;
+                   }    
+                   if(!playerFlag && !opponentFlag){
+                       break;
+                   }
+               }
+               if ( playerFlag ){
+                   return player;
+               }
+               if ( opponentFlag ){
+                   return opponent;
+                }    
+           }
+       }
+       
+       //Analyze right diagonals
+       for(int i= mInRow +1; i<board.getSize().width; ++i){
+           for(int j=0; j<board.getSize().height - mInRow +1; ++j){
+               boolean playerFlag = true;
+               boolean opponentFlag = true;
+               for(int k=0; k<=mInRow-1; ++k){
+                   if(board.getState(i-k, j+k) != player){
+                       playerFlag = false;
+                   }
+                   if(board.getState(i-k, j+k) != opponent){
+                       opponentFlag = false;
+                   }    
+                   if(!playerFlag && !opponentFlag){
+                       break;
+                   }
+               }
+               if ( playerFlag ){
+                   return player;
+               }
+               if ( opponentFlag ){
+                   return opponent;
+                }    
+           }
+       }
+       return null;
+    }
     
     /**
      * Evaluation function for leaves 
      * 
+     * @param player Evaluates node for given player
+     * @param mInRow points in row to win game
      * @return integer which is an evaluation of leaves 
      */
-    public Integer evaluate(){
-        return 5;
+    public int evaluate(GomokuBoardState player, int mInRow){
+        
+        int result = 0;
+        
+        //Look for doubles, triples, and so on
+        int patterns[] = new int[3];
+        for(int i=0; i<3; ++i)
+            patterns[i] = mInRow-2+i;
+        
+        for(int i : patterns){
+            
+           //Analyze columns
+           for(int x=0; x < board.getSize().width; ++x){
+                for(int y=0; y < board.getSize().height - i + 1; ++y){
+                    boolean flag = true;
+                    for(int k=0; k <= i-1; ++k){
+                        if(board.getState(x, y+k) != player){
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        result +=  Math.pow(10, i);
+                }
+            }
+            
+            //Analyze rows
+            for(int y=0; y < board.getSize().height; ++y){
+                for(int x=0; x < board.getSize().width - x + 1; ++x){
+                    boolean flag = true;
+                    for(int k=0; k <= i-1; ++k){
+                        if(board.getState(x+k, y) != player){
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        result +=  Math.pow(10, i);
+                }
+            }
+        
+            //Analyze left diagonals
+            for(int x=0; x < board.getSize().width - i + 1; ++x){
+                for(int y=0; y < board.getSize().height - i + 1; ++y){
+                    boolean flag = true;
+                    for(int k=0; k <= i-1; ++k){
+                        if(board.getState(x+k, y+k) != player){
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        result +=  Math.pow(10, i);
+                }
+            }
+            
+            //Analyze right diagonals
+            for(int x=i-1; x < board.getSize().width; ++x){
+                for(int y=0; y < board.getSize().height - i + 1; ++y){
+                    boolean flag = true;
+                    for(int k=0; k <= i-1; ++k){
+                        if(board.getState(x-k, y+k) != player){
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        result +=  Math.pow(10, i);
+                }
+            }
+        }
+
+        //System.out.printf("Eval: %d\n", result);
+        return result;
     }
     
     /**
